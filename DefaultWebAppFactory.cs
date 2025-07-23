@@ -2,10 +2,8 @@
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using System;
-using System.Collections.Generic;
 
-namespace PIM_API.Tests
+namespace Lopcommerce.Regles.WebAPI.Tests
 {
     public class DefaultWebAppFactory : WebApplicationFactory<Startup>
     {
@@ -18,7 +16,8 @@ namespace PIM_API.Tests
                    .ConfigureAppConfiguration((hostingContext, config) =>
                    {
                        config.Sources.Clear();
-                     
+                       config.AddJsonFile("appsettings.json").Build();
+
                    })
                    .ConfigureAppConfiguration((ctx, conf) =>
                    {

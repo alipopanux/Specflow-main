@@ -1,18 +1,17 @@
 ﻿using FluentAssertions;
-using Microsoft.Extensions.DependencyInjection;
-using Newtonsoft.Json.Converters;
-using Newtonsoft.Json;
-using NUnit.Framework;
-using PIM_API.Tests.Common;
-using System;
-using System.Collections.Generic;
-using System.Net.Http;
-using System.Threading.Tasks;
+using Lopcommerce.Regles.ApiAccess.ExternalApi;
+using Lopcommerce.Regles.DataAccess.Entities;
+using Lopcommerce.Regles.WebAPI.Tests.Mapping;
+using Lopcommerce.Regles.WebAPI.Tests.Mocks;
+using Lopcommerce.Regles.WebAPI.Tests.Remuneration.Services;
 using Microsoft.EntityFrameworkCore;
-using PIM_DataAccess.DB_CONTEXT;
-using System.Security.Claims;
+using Microsoft.Extensions.DependencyInjection;
+using Moq;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Lopcommerce.Regles.DataAccess.Repository;
 
-namespace PIM_API.Tests
+namespace Lopcommerce.Regles.WebAPI.Tests
 {
     public class TestContext
     {
@@ -23,21 +22,27 @@ namespace PIM_API.Tests
         public object Request { get; internal set; }
         public HttpResponseMessage Reponse { get; internal set; }
         public IDbTestRepository DbTestRepository => new DbContextTestRepository(
-            GetDbContext<PIM_DB_Context>());
+            GetDbContext<ConstanteDBContext>());
+        public Mock<ICerfaRepository> MockCerfaRepository { get; }
 
-       
+        public Mock<IDecaApiService> MockDecaApiService { get; }
+
         public TestContext(DefaultWebAppFactory webAppFactory)
         {
             _webAppFactory = webAppFactory;
+            MockCerfaRepository = new Mock<ICerfaRepository>();
+            MockDecaApiService = new Mock<IDecaApiService>();
             ConfigureService(svc =>
             {
-                var inputClaims = new List<Claim> { new Claim(ClaimTypes.Name, "Ali AMADJAR") };
-                svc.AddDbContext<AAAAAAA>();
-                svc.AddSingleton<IDateTimeProvider, TestDateTimeProvider>();
-                // Enregistrer l'Authentification
-                //svc.AddAuthentication("Test")
-                //    .AddScheme<TestAuthenticationSchemeOptions, TestAuthHandler>(
-                //        "Test", options => { options.Claims = inputClaims; });
+                svc.AddAutoMapper(AppDomain.CurrentDomain.GetAssemblies());
+                svc.AddSingleton<IConstanteService, ConstanteService>();
+                svc.AddSingleton<IBackApiService, MockBackApiService>();
+                svc.AddSingleton<IReferentielApiService, MockReferentielApiService>();
+                svc.AddSingleton<IRemunerationApiService, MockRemunerationApiService>();
+                svc.AddSingleton<IRemunerationService, RemunerationService>();
+                svc.AddSingleton<IOrganismeFormationRepository, MockOrganismeFormationRepository>();
+                svc.AddSingleton(MockDecaApiService.Object);
+                svc.AddSingleton(MockCerfaRepository.Object);
             });
         }
 
@@ -53,7 +58,7 @@ namespace PIM_API.Tests
         {
             _webAppFactory.AddConfigServices(action);
         }
-     
+
         public void ValidateRequestParams<TType>(TType expectedRequestParams)
         {
             Type requestType = typeof(TType);
@@ -77,7 +82,7 @@ namespace PIM_API.Tests
             var reponse = await Reponse.Content.ReadAsStringAsync();
             return JsonConvert.DeserializeObject<TType>(reponse, jsonSettings);
         }
-   
+
         public async Task<TType> ObtenirReponseApiAvecFormatDate<TType>()
         {
             var reponse = await Reponse.Content.ReadAsStringAsync();
